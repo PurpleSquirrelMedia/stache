@@ -170,6 +170,7 @@ pub mod stache {
         vault.vault_type = vault_type;
         vault.bump = *ctx.bumps.get("vault").unwrap();
         vault.next_action_index = 1;
+        vault.next_session_index = 1;
         vault.locked = false;
 
         Ok(())
@@ -181,30 +182,96 @@ pub mod stache {
         Ok(())
     }
 
+    // creates a session for a given vault
+    // session_length = num seconds the session will be valid for
+    pub fn create_session(ctx: Context<CreateSession>, start_time: i64, session_length: u32, allowed_keys: Vec<Pubkey>) -> Result<()> {
+
+        require!(allowed_keys.len() <= MAX_SESSION_KEYS, StacheError::SessionKeyLimit);
+
+        let stache = &mut ctx.accounts.stache;
+        let vault = &mut ctx.accounts.vault;
+        let session = &mut ctx.accounts.session;
+        let clock = &ctx.accounts.clock;
+
+        // add the session to the vault
+        let session_index = vault.add_session()?;
+
+        // setup the session
+        session.vault = ctx.accounts.vault.key();
+        session.index = session_index;
+        session.bump = *ctx.bumps.get("session").unwrap();
+        if start_time == 0 {
+            session.start_time = clock.unix_timestamp;
+        } else {
+            // todo: make sure start_time is in the future ..?
+            session.start_time = start_time;
+        }
+        if session_length == 0 {
+            session.end_time = 0;
+        } else {
+            session.end_time = session.start_time + session_length as i64;
+        }
+        session.allowed_keys = allowed_keys;
+
+        Ok(())
+    }
+
+    // renews a session by extending the session length
+    // if session is over OR open, then extends it from the current time, if it's it's not, then
+    // extends it from the end time
+    pub fn extend_session(ctx: Context<ExtendSession>, session_length: u32) -> Result<()> {
+        let session = &mut ctx.accounts.session;
+        let clock = &ctx.accounts.clock;
+
+        if session.end_time == 0 || session.end_time < clock.unix_timestamp {
+            session.end_time = clock.unix_timestamp + session_length as i64;
+        } else {
+            session.end_time += session_length as i64;
+        }
+        Ok(())
+    }
+
+    pub fn destroy_session(ctx: Context<DestroySession>) -> Result<()> {
+        let vault = &mut ctx.accounts.vault;
+        let session = &mut ctx.accounts.session;
+
+        // remove the session from the vault
+        vault.remove_session(session.index);
+
+        Ok(())
+    }
+
+   // make a withdrawal from a vault using a session key
+    pub fn withdraw_from_session_vault(ctx: Context<WithdrawFromSessionVault>, amount: u64) -> Result<()> {
+
+        let session = &mut ctx.accounts.session;
+
+        // check our session params
+        require!(session.start_time <= ctx.accounts.clock.unix_timestamp, StacheError::InvalidSession);
+        require!(session.end_time == 0 || session.end_time > ctx.accounts.clock.unix_timestamp, StacheError::InvalidSession);
+
+        let stache = &mut ctx.accounts.stache;
+        let vault = &mut ctx.accounts.vault;
+        let vault_ata = &ctx.accounts.vault_ata;
+        let authority = &ctx.accounts.authority.key();
+        let to_token = &ctx.accounts.to_token;
+        let token_program = &ctx.accounts.token_program;
+
+        return do_vault_withdrawal(stache, vault, vault_ata, to_token, authority, token_program, amount);
+    }
 
     pub fn withdraw_from_vault(ctx: Context<WithdrawFromVault>, amount: u64) -> Result<()> {
         let stache = &mut ctx.accounts.stache;
         let tokens_left = ctx.accounts.vault_ata.amount;
 
-        let vault_authority = ctx.accounts.vault.clone().to_account_info();
-        let mut vault = &mut ctx.accounts.vault;
+        let stache = &mut ctx.accounts.stache;
+        let vault = &mut ctx.accounts.vault;
+        let vault_ata = &ctx.accounts.vault_ata;
+        let authority = &ctx.accounts.authority.key();
+        let to_token = &ctx.accounts.to_token;
+        let token_program = &ctx.accounts.token_program;
 
-        require!(amount <= tokens_left, StacheError::InsufficientFunds);
-
-        if vault.withdraw(&ctx.accounts.authority.key(), &ctx.accounts.vault_ata.key(), &ctx.accounts.to_token.key(), amount).unwrap() {
-            // withdraw
-            transfer_from_vault(&stache,
-                                &mut vault,
-                                vault_authority,
-                                ctx.accounts.vault_ata.clone().to_account_info(),
-                                ctx.accounts.to_token.clone().to_account_info(),
-                                amount,
-                                ctx.accounts.token_program.clone().to_account_info())?;
-
-
-        }
-
-        Ok(())
+        return do_vault_withdrawal(stache, vault, vault_ata, to_token, authority, token_program, amount);
     }
 
     pub fn approve_action<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ApproveVaultAction<'info>>, action_index: u8) -> Result<()> {
@@ -358,7 +425,7 @@ pub mod stache {
             return Err(StacheError::MissingAccount.into());
         }
 
-        let mut token = ctx.accounts.token.as_ref().unwrap().key();
+        let token = ctx.accounts.token.as_ref().unwrap().key();
 
         // set the trigger
         auto.trigger_type = Some(TriggerType::Balance);
@@ -637,6 +704,30 @@ pub mod stache {
         Ok(())
     }
 
+}
+
+pub fn do_vault_withdrawal<'a, 'b>(stache: &mut Account<CurrentStache>, vault: &mut Account<'a, Vault>,
+                                   vault_ata: &Account<'b, TokenAccount>, to_token: &Account<'a, TokenAccount>,
+                                   authority: &Pubkey, token_program: &Program<'a, Token>, amount: u64) -> Result<()>
+    where 'a: 'b, 'b: 'a {
+
+    let tokens_left = vault_ata.amount;
+    require!(amount <= tokens_left, StacheError::InsufficientFunds);
+
+    let vault_authority = vault.clone().to_account_info();
+
+    if vault.withdraw(authority, &vault_ata.key(), &to_token.key(), amount).unwrap() {
+        // withdraw
+        transfer_from_vault(&stache,
+                            vault,
+                            vault_authority,
+                            vault_ata.clone().to_account_info(),
+                            to_token.clone().to_account_info(),
+                            amount,
+                            token_program.clone().to_account_info())?;
+    }
+
+    Ok(())
 }
 
 // transfer some tokens out of a vault ata

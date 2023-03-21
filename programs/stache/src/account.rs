@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::constant::{MAX_SUBMITTERS, MAX_APPROVERS, MAX_VAULTS, MAX_VAULT_ACTIONS, MAX_AUTOS};
+use crate::constant::{MAX_SUBMITTERS, MAX_APPROVERS, MAX_VAULTS, MAX_VAULT_ACTIONS, MAX_AUTOS, MAX_VAULT_SESSIONS, MAX_SESSION_KEYS};
 use crate::error::StacheError;
+use crate::util::add_index;
 
 
 // "current" cause later we'll use the versioning system that keychain
@@ -64,31 +65,14 @@ impl CurrentStache {
         return self.is_index(index, &self.autos);
     }
 
-    fn add_index(list: &mut Vec<u8>, max: usize, next_index: &mut u8) -> Result<u8> {
-        // check that we've got room
-        require!(usize::from(list.len()) < max, StacheError::HitLimit);
-
-        // todo: handle wrapping properly
-        let mut index: u8 = *next_index;
-        if index + 1 == u8::MAX {
-            *next_index = 2;
-            index = 1;
-        } else {
-            *next_index += 1;
-        }
-
-        list.push(index);
-        return Ok(index);
-    }
-
     // adds a vault, increments next vault index, and returns the index of added vault
     pub fn add_vault(&mut self) -> Result<u8> {
-        return Self::add_index(&mut self.vaults, MAX_VAULTS, &mut self.next_vault_index);
+        return add_index(&mut self.vaults, MAX_VAULTS, &mut self.next_vault_index);
     }
 
     // adds a vault, increments next vault index, and returns the index of added vault
     pub fn add_auto(&mut self) -> Result<u8> {
-        return Self::add_index(&mut self.autos, MAX_AUTOS, &mut self.next_auto_index);
+        return add_index(&mut self.autos, MAX_AUTOS, &mut self.next_auto_index);
     }
 
 }
@@ -125,6 +109,8 @@ pub struct Vault {
     pub name: String,
     pub next_action_index: u8,      // todo: deal with wrapping
     pub actions: Vec<VaultAction>,
+    pub next_session_index: u8,
+    pub sessions: Vec<u8>,          // session ids that are currently active
 }
 
 impl Vault {
@@ -137,6 +123,8 @@ impl Vault {
         1 +         // locked
         32 +        // name
         (4 + (MAX_VAULT_ACTIONS * VaultAction::MAX_SIZE)) + // actions
+            1 +         // next session index
+        (4 + (MAX_VAULT_SESSIONS)) + // sessions
         128;        // extra space for now during dev
 
     pub fn get_action(&mut self, action_index: u8) -> Option<&mut VaultAction> {
@@ -157,6 +145,19 @@ impl Vault {
         match self.actions.iter().position(|x| x.action_index == index) {
             Some(index) => {
                 self.actions.swap_remove(index);
+            }
+            _ => {}
+        }
+    }
+
+    pub fn add_session(&mut self) -> Result<u8> {
+        return add_index(&mut self.sessions, MAX_VAULT_SESSIONS, &mut self.next_session_index);
+    }
+
+    pub fn remove_session(&mut self, index: u8) {
+        match self.sessions.iter().position(|&x| x == index) {
+            Some(index) => {
+                self.sessions.swap_remove(index);
             }
             _ => {}
         }
@@ -343,5 +344,32 @@ impl Auto {
         Ok(balance_trigger)
     }
 }
+
+
+//// sessions
+
+#[account]
+pub struct Session {
+    pub vault: Pubkey,
+    pub index: u8,
+    pub bump: u8,
+    pub start_time: i64,
+    pub end_time: i64,     // 0 = open ended
+    pub allowed_keys: Vec<Pubkey>,
+}
+
+impl Session {
+
+    pub const MAX_SIZE: usize =
+        32 +        // vault
+        1 +         // index
+        1 +         // bump
+        8 +         // start_time
+        8 +         // end_time
+        4 + (32 * MAX_SESSION_KEYS);        // allowed_keys
+
+}
+
+
 
 

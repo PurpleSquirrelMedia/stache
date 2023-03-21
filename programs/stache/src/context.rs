@@ -28,7 +28,7 @@ pub struct CreateStache<'info> {
     pub stache: Account<'info, CurrentStache>,
 
     // #[account(mut, owner = keychain_program.key)]
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(mut)]
@@ -51,7 +51,7 @@ pub struct DestroyStache<'info> {
     pub stache: Account<'info, CurrentStache>,
 
     // #[account(mut, owner = keychain_program.key)]
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(mut)]
@@ -72,7 +72,7 @@ pub struct Stash<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&owner.key()))]
+    #[account(constraint = keychain.has_verified_key(&owner.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -103,7 +103,7 @@ pub struct UnstashSol<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&owner.key()))]
+    #[account(constraint = keychain.has_verified_key(&owner.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(mut)]
@@ -123,7 +123,7 @@ pub struct Unstash<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&owner.key()))]
+    #[account(constraint = keychain.has_verified_key(&owner.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -157,7 +157,7 @@ pub struct CreateVault<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -190,7 +190,7 @@ pub struct LockVault<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -214,7 +214,7 @@ pub struct DestroyVault<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -238,7 +238,7 @@ pub struct WithdrawFromVault<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -281,7 +281,7 @@ pub struct ApproveVaultAction<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -314,7 +314,7 @@ pub struct DenyVaultAction<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -327,6 +327,8 @@ pub struct DenyVaultAction<'info> {
     pub authority: Signer<'info>,
 }
 
+
+
 //////// AUTOMATIONS ////////
 
 #[derive(Accounts)]
@@ -338,7 +340,7 @@ pub struct CreateAutomation<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -370,7 +372,7 @@ pub struct DestroyAutomation<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -400,7 +402,7 @@ pub struct SetAutomationTrigger<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -428,7 +430,7 @@ pub struct SetAutomationAction<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -468,7 +470,7 @@ pub struct ActivateAutomation<'info> {
     )]
     pub stache: Account<'info, CurrentStache>,
 
-    #[account(constraint = keychain.has_key(&authority.key()))]
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
     pub keychain: Account<'info, CurrentKeyChain>,
 
     #[account(
@@ -525,3 +527,160 @@ pub struct FireAutomation<'info> {
     pub token_program: Program<'info, Token>,
 
 }
+
+/////// SESSIONS ////////
+
+#[derive(Accounts)]
+pub struct CreateSession<'info> {
+
+    #[account(
+    mut,
+    constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
+    has_one = keychain,
+    )]
+    pub stache: Account<'info, CurrentStache>,
+
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
+    pub keychain: Account<'info, CurrentKeyChain>,
+
+    #[account(
+    mut,
+    has_one = stache,
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+    init,
+    payer = authority,
+    seeds = [
+    &vault.next_session_index.to_le_bytes(),
+    SESSION_SPACE.as_bytes().as_ref(),
+    &vault.index.to_le_bytes(),
+    VAULT_SPACE.as_bytes().as_ref(),
+    stache.stacheid.as_bytes().as_ref(),
+    BEARD_SPACE.as_bytes().as_ref(),
+    stache.domain.as_ref(),
+    STACHE.as_bytes().as_ref()],
+    bump,
+    space = 8 + Vault::MAX_SIZE,
+    )]
+    pub session: Account<'info, Session>,
+
+    pub system_program: Program<'info, System>,
+    pub clock: Sysvar<'info, Clock>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawFromSessionVault<'info> {
+
+    #[account(
+    mut,
+    constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
+    )]
+    pub stache: Account<'info, CurrentStache>,
+
+    #[account(
+    mut,
+    has_one = stache,
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(
+    mut,
+    has_one = vault,
+    constraint = session.allowed_keys.contains(&authority.key()) @StacheError::NotAuthorized,
+    )]
+    pub session: Account<'info, Session>,
+
+    #[account(
+    mut,
+    associated_token::mint = mint,
+    associated_token::authority = vault,
+    )]
+    pub vault_ata: Account<'info, TokenAccount>,
+
+    // where to send the tokens when emptying
+    #[account(
+    mut,
+    token::mint = mint,
+    )]
+    pub to_token: Account<'info, TokenAccount>,
+
+    pub mint: Account<'info, Mint>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub clock: Sysvar<'info, Clock>,
+
+}
+
+
+#[derive(Accounts)]
+pub struct ExtendSession<'info> {
+
+    #[account(
+    mut,
+    constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
+    has_one = keychain,
+    )]
+    pub stache: Account<'info, CurrentStache>,
+
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
+    pub keychain: Account<'info, CurrentKeyChain>,
+
+    #[account(
+    mut,
+    has_one = stache,
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+    mut,
+    has_one = vault,
+    )]
+    pub session: Account<'info, Session>,
+
+    pub clock: Sysvar<'info, Clock>,
+}
+
+
+#[derive(Accounts)]
+pub struct DestroySession<'info> {
+
+    #[account(
+    mut,
+    constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
+    has_one = keychain,
+    )]
+    pub stache: Account<'info, CurrentStache>,
+
+    #[account(constraint = keychain.has_verified_key(&authority.key()))]
+    pub keychain: Account<'info, CurrentKeyChain>,
+
+    #[account(
+    mut,
+    has_one = stache,
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+    mut,
+    has_one = vault,
+    close = authority,
+    )]
+    pub session: Account<'info, Session>,
+}
+
+

@@ -48,5 +48,9 @@ pub enum StacheError {
     TriggerLimit,
     #[msg("Automation execution limit hit")]
     ExecLimit,
+    #[msg("Too many session keys")]
+    SessionKeyLimit,
+    #[msg("Invalid session")]
+    InvalidSession,
 
 }

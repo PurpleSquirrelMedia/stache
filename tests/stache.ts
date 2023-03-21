@@ -21,7 +21,7 @@ import {
   findDomainStatePda,
   findKeychainKeyPda,
   findKeychainPda,
-  findKeychainStatePda, findVaultPda, findAutoPda, findThreadPda
+  findKeychainStatePda, findVaultPda, findAutoPda, findThreadPda, findSessionPda, sleep
 } from "./utils";
 import * as assert from "assert";
 import {
@@ -62,7 +62,7 @@ function randomName() {
   return name.toLowerCase();
 }
 
-// for setting up the keychaink
+// for setting up the keychain
 const domain = randomName();
 const treasury = anchor.web3.Keypair.generate();
 const renameCost = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.01);
@@ -98,6 +98,8 @@ describe("stache", () => {
   let vaultAta: PublicKey;
   let easyVaultAta: PublicKey;
   let key2: Keypair = Keypair.generate();
+  let sessionKey: Keypair = Keypair.generate();
+  let sessionKeyAta: PublicKey;
 
   // for admin stuff
   const admin = anchor.web3.Keypair.generate();
@@ -125,6 +127,10 @@ describe("stache", () => {
     );
     await connection.confirmTransaction(
         await connection.requestAirdrop(key2.publicKey, anchor.web3.LAMPORTS_PER_SOL * 50),
+        "confirmed"
+    );
+    await connection.confirmTransaction(
+        await connection.requestAirdrop(sessionKey.publicKey, anchor.web3.LAMPORTS_PER_SOL * 50),
         "confirmed"
     );
 
@@ -197,6 +203,7 @@ describe("stache", () => {
     // ata for the user
     userAta = await createAssociatedTokenAccount(connection, admin, mint.publicKey, provider.wallet.publicKey);
     adminAta = await createAssociatedTokenAccount(connection, admin, mint.publicKey, admin.publicKey);
+    sessionKeyAta = await createAssociatedTokenAccount(connection, admin, mint.publicKey, sessionKey.publicKey);
     console.log(`created user ata: ${userAta.toBase58()}`);
 
     // now mint 10k tokens to each ata
@@ -304,7 +311,7 @@ describe("stache", () => {
       toToken: userAta,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      // rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     }).transaction();
 
     txid = await provider.sendAndConfirm(tx);
@@ -592,6 +599,129 @@ describe("stache", () => {
         */
   });
 
+  it('creates a session', async () => {
+
+    // create a session key for the easyvault
+    const [sessionPda, sessionBump] = findSessionPda(1, 2, username, domainPda, stacheProgram.programId)
+    // create session for 5 seconds
+    let txid = await stacheProgram.methods.createSession(new anchor.BN(0), 5, [sessionKey.publicKey]).accounts({
+      stache: stachePda,
+      keychain: userKeychainPda,
+      authority: provider.wallet.publicKey,
+      vault: easyVaultPda,
+      session: sessionPda,
+      systemProgram: SystemProgram.programId,
+      clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+    }).rpc();
+
+    console.log(`created session ${sessionPda.toString()} in tx: ${txid}`);
+
+    // now try to withdraw something from the vault with the session key
+    let withdrawAmount = 1e9;  // take out 1 token
+    txid = await stacheProgram.methods.withdrawFromSessionVault(new anchor.BN(withdrawAmount)).accounts({
+      stache: stachePda,
+      vault: easyVaultPda,
+      session: sessionPda,
+      vaultAta: easyVaultAta,
+      toToken: sessionKeyAta,
+      mint: mint.publicKey,
+      authority: sessionKey.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+    }).signers([sessionKey]).rpc();
+
+    console.log(`withdrew 1 token from vault ${easyVaultPda.toString()} with session ${sessionPda.toString()} in tx: ${txid}`);
+
+    // the sessionkey ata should now have the token
+    let sessionKeyTokenBalance = await connection.getTokenAccountBalance(sessionKeyAta);
+    expect(sessionKeyTokenBalance.value.uiAmount).to.equal(1);
+
+    // todo: wait 5 seconds and try to withdraw again, should fail
+    await sleep(5500);
+
+    try {
+      await stacheProgram.methods.withdrawFromSessionVault(new anchor.BN(withdrawAmount)).accounts({
+        stache: stachePda,
+        vault: easyVaultPda,
+        session: sessionPda,
+        vaultAta: easyVaultAta,
+        toToken: sessionKeyAta,
+        mint: mint.publicKey,
+        authority: sessionKey.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+      }).signers([sessionKey]).rpc();
+      assert.fail('should not have been able to withdraw from session vault after session expired');
+    } catch (err) {
+      // expected error : invalid session
+      // console.log('expected error: ', err);
+    }
+
+    // now we extend the session by another 5 seconds
+    txid = await stacheProgram.methods.extendSession(5).accounts({
+      stache: stachePda,
+      keychain: userKeychainPda,
+      vault: easyVaultPda,
+      authority: provider.wallet.publicKey,
+      session: sessionPda,
+      clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+    }).rpc();
+
+    console.log(`extended session ${sessionPda.toString()} in tx: ${txid}`);
+
+    // and now we can withdraw again
+    txid = await stacheProgram.methods.withdrawFromSessionVault(new anchor.BN(withdrawAmount)).accounts({
+      stache: stachePda,
+      vault: easyVaultPda,
+      session: sessionPda,
+      vaultAta: easyVaultAta,
+      toToken: sessionKeyAta,
+      mint: mint.publicKey,
+      authority: sessionKey.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+    }).signers([sessionKey]).rpc();
+
+    console.log(`withdrew 1 more token from vault ${easyVaultPda.toString()} with session ${sessionPda.toString()} in tx: ${txid}`);
+
+    // now we end the session
+    await stacheProgram.methods.destroySession().accounts({
+      stache: stachePda,
+      keychain: userKeychainPda,
+      vault: easyVaultPda,
+      authority: provider.wallet.publicKey,
+      session: sessionPda,
+    }).rpc();
+
+    console.log(`destroyed session ${sessionPda.toString()} in tx: ${txid}`);
+
+    // this will now fail
+    try {
+      await stacheProgram.methods.withdrawFromSessionVault(new anchor.BN(withdrawAmount)).accounts({
+        stache: stachePda,
+        vault: easyVaultPda,
+        session: sessionPda,
+        vaultAta: easyVaultAta,
+        toToken: sessionKeyAta,
+        mint: mint.publicKey,
+        authority: sessionKey.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+      }).signers([sessionKey]).rpc();
+      assert.fail('should not have been able to withdraw from session vault after session expired');
+    } catch (err) {
+      // expected error : the session account should be gone
+      console.log('expected error: ', err);
+    }
+
+    // verify that it's gone
+    const sessionAcct = await stacheProgram.account.session.fetchNullable(sessionPda);
+    expect(sessionAcct).to.be.null;
+  });
 
   it('destroys a vault', async () => {
 

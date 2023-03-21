@@ -20,6 +20,7 @@ export const KEY_SPACE = 'keys';
 export const STACHE = 'stache';
 export const BEARD_SPACE = 'beards';
 export const VAULT_SPACE = 'vaults';
+export const SESSION_SPACE = 'sessions';
 export const AUTOMATIONS_SPACE = 'automations';
 
 // devnet v2
@@ -177,5 +178,24 @@ export const findThreadPda = (id: string, threadAuthority: PublicKey): [PublicKe
       ],
       ThreadProgId,
   );
+}
 
+export const findSessionPda = (sessionIndex: number, vaultIndex: number, stacheid: string, domainPda: PublicKey, stacheprogid: PublicKey): [PublicKey, number] => {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from([sessionIndex]),
+        Buffer.from(anchor.utils.bytes.utf8.encode(SESSION_SPACE)),
+        Buffer.from([vaultIndex]),
+        Buffer.from(anchor.utils.bytes.utf8.encode(VAULT_SPACE)),
+        Buffer.from(anchor.utils.bytes.utf8.encode(stacheid)),
+        Buffer.from(anchor.utils.bytes.utf8.encode(BEARD_SPACE)),
+        domainPda.toBuffer(),
+        Buffer.from(anchor.utils.bytes.utf8.encode(STACHE)),
+      ],
+      stacheprogid,
+  );
+}
+
+export function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

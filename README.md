@@ -91,6 +91,9 @@ has the resemblence of swiss cheese.
 
 On devnet, the latest version is currently deployed at: staWbEoarryYLMGxptDQKLvVMD8HqhzmBfWsAWGJQrz
 
+# Changelog
+- 2023.03.21 - added support for sessions
+
 # Contact
 
 We'd love any feedback, and of course if you have any questions, issues, or concerns, please don't hesitate to reach out to us at:
