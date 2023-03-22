@@ -591,7 +591,7 @@ pub struct WithdrawFromSessionVault<'info> {
     #[account(
     mut,
     has_one = vault,
-    constraint = session.allowed_keys.contains(&authority.key()) @StacheError::NotAuthorized,
+    constraint = session.allowed_keys.is_empty() || session.allowed_keys.contains(&authority.key()) @StacheError::NotAuthorized,
     )]
     pub session: Account<'info, Session>,
 

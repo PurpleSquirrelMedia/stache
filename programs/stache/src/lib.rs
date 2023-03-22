@@ -184,6 +184,7 @@ pub mod stache {
 
     // creates a session for a given vault
     // session_length = num seconds the session will be valid for
+    // if allowed_keys is empty, then anyone can use the session
     pub fn create_session(ctx: Context<CreateSession>, start_time: i64, session_length: u32, allowed_keys: Vec<Pubkey>) -> Result<()> {
 
         require!(allowed_keys.len() <= MAX_SESSION_KEYS, StacheError::SessionKeyLimit);
