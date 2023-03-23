@@ -25,11 +25,11 @@ pub struct CreateStache<'info> {
     bump,
     space = 8 + CurrentStache::MAX_SIZE,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     // #[account(mut, owner = keychain_program.key)]
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -48,11 +48,11 @@ pub struct DestroyStache<'info> {
     close = authority,
     has_one = keychain
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     // #[account(mut, owner = keychain_program.key)]
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -70,24 +70,24 @@ pub struct Stash<'info> {
     mut,
     has_one = keychain
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&owner.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = stache
     )]
-    pub stache_ata: Account<'info, TokenAccount>,
-    pub mint: Account<'info, Mint>,
+    pub stache_ata: Box<Account<'info, TokenAccount>>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(mut, has_one = owner)]
-    pub from_token: Account<'info, TokenAccount>,
+    pub from_token: Box<Account<'info, TokenAccount>>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -101,10 +101,10 @@ pub struct UnstashSol<'info> {
     mut,
     has_one = keychain
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&owner.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -121,24 +121,24 @@ pub struct Unstash<'info> {
     mut,
     has_one = keychain
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&owner.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = stache
     )]
-    pub stache_ata: Account<'info, TokenAccount>,
-    pub mint: Account<'info, Mint>,
+    pub stache_ata: Box<Account<'info, TokenAccount>>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(mut, has_one = owner)]
-    pub to_token: Account<'info, TokenAccount>,
+    pub to_token: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -155,10 +155,10 @@ pub struct CreateVault<'info> {
     mut,
     has_one = keychain
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     init,
@@ -172,7 +172,7 @@ pub struct CreateVault<'info> {
     bump,
     space = 8 + Vault::MAX_SIZE,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -188,16 +188,16 @@ pub struct LockVault<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -212,17 +212,17 @@ pub struct DestroyVault<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     close = authority,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -236,32 +236,32 @@ pub struct WithdrawFromVault<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(
     mut,
     associated_token::mint = mint,
     associated_token::authority = vault,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
 
     // where to send the tokens when emptying
     #[account(
     mut,
     token::mint = mint,
     )]
-    pub to_token: Account<'info, TokenAccount>,
+    pub to_token: Box<Account<'info, TokenAccount>>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -279,17 +279,17 @@ pub struct ApproveVaultAction<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     constraint = vault.is_action(action_index).is_some() @StacheError::InvalidAction,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -312,16 +312,16 @@ pub struct DenyVaultAction<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -338,10 +338,10 @@ pub struct CreateAutomation<'info> {
         mut,
         has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
         init,
@@ -355,7 +355,7 @@ pub struct CreateAutomation<'info> {
         bump,
         space = 8 + Auto::MAX_SIZE,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -370,17 +370,17 @@ pub struct DestroyAutomation<'info> {
     mut,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     close = authority,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -400,16 +400,16 @@ pub struct SetAutomationTrigger<'info> {
     mut,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -428,16 +428,16 @@ pub struct SetAutomationAction<'info> {
     mut,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -457,7 +457,7 @@ pub struct SetAutomationAction<'info> {
     )]
     pub to_token: Option<Account<'info, TokenAccount>>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: Box<Account<'info, Mint>>,
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
 }
 
@@ -468,16 +468,16 @@ pub struct ActivateAutomation<'info> {
     mut,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -498,13 +498,13 @@ pub struct FireAutomation<'info> {
     #[account(
     mut,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub auto: Account<'info, Auto>,
+    pub auto: Box<Account<'info, Auto>>,
 
     // the clockwork thread account - optional in case the user wants to test the automation outside of clockwork
     #[account(
@@ -513,16 +513,16 @@ pub struct FireAutomation<'info> {
     constraint = thread.authority.eq(&auto.key()) @StacheError::InvalidThread,
     address = Thread::pubkey(auto.key(), auto.name.clone().into()))
     ]
-    pub thread: Account<'info, Thread>,
+    pub thread: Box<Account<'info, Thread>>,
 
     // for doing transfers we'll need the appropriate token accounts - but normally would be optional cause depends what the automation needs but for now req'd since
     // our only action = transfer and i don't have time to solve "instruction tries to borrow reference for an account which is already borrowed" error
 
     #[account(mut)]
-    pub from_token: Account<'info, TokenAccount>,
+    pub from_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
-    pub to_token: Account<'info, TokenAccount>,
+    pub to_token: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 
@@ -538,16 +538,16 @@ pub struct CreateSession<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -567,7 +567,7 @@ pub struct CreateSession<'info> {
     bump,
     space = 8 + Vault::MAX_SIZE,
     )]
-    pub session: Account<'info, Session>,
+    pub session: Box<Account<'info, Session>>,
 
     pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
@@ -580,36 +580,36 @@ pub struct WithdrawFromSessionVault<'info> {
     mut,
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(
     mut,
     has_one = vault,
     constraint = session.allowed_keys.is_empty() || session.allowed_keys.contains(&authority.key()) @StacheError::NotAuthorized,
     )]
-    pub session: Account<'info, Session>,
+    pub session: Box<Account<'info, Session>>,
 
     #[account(
     mut,
     associated_token::mint = mint,
     associated_token::authority = vault,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
 
     // where to send the tokens when emptying
     #[account(
     mut,
     token::mint = mint,
     )]
-    pub to_token: Account<'info, TokenAccount>,
+    pub to_token: Box<Account<'info, TokenAccount>>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -629,16 +629,16 @@ pub struct ExtendSession<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -647,7 +647,7 @@ pub struct ExtendSession<'info> {
     mut,
     has_one = vault,
     )]
-    pub session: Account<'info, Session>,
+    pub session: Box<Account<'info, Session>>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -661,16 +661,16 @@ pub struct DestroySession<'info> {
     constraint = stache.is_vault(vault.index).is_some() @StacheError::InvalidVault,
     has_one = keychain,
     )]
-    pub stache: Account<'info, CurrentStache>,
+    pub stache: Box<Account<'info, CurrentStache>>,
 
     #[account(constraint = keychain.has_verified_key(&authority.key()))]
-    pub keychain: Account<'info, CurrentKeyChain>,
+    pub keychain: Box<Account<'info, CurrentKeyChain>>,
 
     #[account(
     mut,
     has_one = stache,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -680,7 +680,7 @@ pub struct DestroySession<'info> {
     has_one = vault,
     close = authority,
     )]
-    pub session: Account<'info, Session>,
+    pub session: Box<Account<'info, Session>>,
 }
 
 
